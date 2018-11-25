@@ -1,8 +1,36 @@
+/*
+I have stolen it from https://github.com/alno/scalann
+So it is under MIT.
+
+
+MIT License
+
+Copyright (c) 2017 Alexey Noskov
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+IN THE SOFTWARE.
+*/
+
 package example
 
-import java.io.{ File, FileInputStream, FileOutputStream, DataInputStream }
+import java.io.{File, FileInputStream, FileOutputStream, DataInputStream}
 import java.net.URL
-import java.nio.file.{ Files, Paths }
+import java.nio.file.{Files, Paths}
 import java.nio.channels.Channels
 import java.util.zip.GZIPInputStream
 import breeze.linalg._
@@ -14,17 +42,20 @@ class MnistFileReader(location: String, fileName: String) {
   if (!Files.exists(path))
     download
 
-  protected[this] val stream = new DataInputStream(new GZIPInputStream(new FileInputStream(path.toString)))
+  protected[this] val stream = new DataInputStream(
+    new GZIPInputStream(new FileInputStream(path.toString)))
 
   private def download: Unit = {
-    val rbc = Channels.newChannel(new URL(s"http://yann.lecun.com/exdb/mnist/$fileName").openStream())
+    val rbc = Channels.newChannel(
+      new URL(s"http://yann.lecun.com/exdb/mnist/$fileName").openStream())
     val fos = new FileOutputStream(s"$location/$fileName")
     fos.getChannel.transferFrom(rbc, 0, Long.MaxValue)
   }
 
 }
 
-class MnistLabelReader(location: String, fileName: String) extends MnistFileReader(location, fileName) {
+class MnistLabelReader(location: String, fileName: String)
+  extends MnistFileReader(location, fileName) {
 
   assert(stream.readInt() == 2049, "Wrong MNIST label stream magic")
 
@@ -32,7 +63,9 @@ class MnistLabelReader(location: String, fileName: String) extends MnistFileRead
 
   val labelsAsInts = readLabels(0)
   val labelsAsVectors = labelsAsInts.map { label =>
-    DenseVector.tabulate[Double](10) { i => if (i == label) 1.0 else 0.0 }
+    DenseVector.tabulate[Double](10) { i =>
+      if (i == label) 1.0 else 0.0
+    }
   }
 
   private[this] def readLabels(ind: Int): Stream[Int] =
@@ -43,7 +76,8 @@ class MnistLabelReader(location: String, fileName: String) extends MnistFileRead
 
 }
 
-class MnistImageReader(location: String, fileName: String) extends MnistFileReader(location, fileName) {
+class MnistImageReader(location: String, fileName: String)
+  extends MnistFileReader(location, fileName) {
 
   assert(stream.readInt() == 2051, "Wrong MNIST image stream magic")
 
@@ -53,7 +87,9 @@ class MnistImageReader(location: String, fileName: String) extends MnistFileRead
 
   val imagesAsMatrices = readImages(0)
   val imagesAsVectors = imagesAsMatrices map { image =>
-    DenseVector.tabulate(width * height) { i => image(i / width, i % height) / 255.0 }
+    DenseVector.tabulate(width * height) { i =>
+      image(i / width, i % height) / 255.0
+    }
   }
 
   private[this] def readImages(ind: Int): Stream[DenseMatrix[Int]] =
@@ -74,20 +110,25 @@ class MnistImageReader(location: String, fileName: String) extends MnistFileRead
 }
 
 /**
- * http://yann.lecun.com/exdb/mnist/
- */
+  * http://yann.lecun.com/exdb/mnist/
+  */
 class MnistDataset(location: String, dataset: String) {
 
-  lazy val imageReader = new MnistImageReader(location, s"$dataset-images-idx3-ubyte.gz")
-  lazy val labelReader = new MnistLabelReader(location, s"$dataset-labels-idx1-ubyte.gz")
+  lazy val imageReader =
+    new MnistImageReader(location, s"$dataset-images-idx3-ubyte.gz")
+  lazy val labelReader =
+    new MnistLabelReader(location, s"$dataset-labels-idx1-ubyte.gz")
 
   def imageWidth = imageReader.width
+
   def imageHeight = imageReader.height
 
   def imagesAsMatrices = imageReader.imagesAsMatrices
+
   def imagesAsVectors = imageReader.imagesAsVectors
 
   def labelsAsInts = labelReader.labelsAsInts
+
   def labelsAsVectors = labelReader.labelsAsVectors
 
   def examples = imagesAsVectors zip labelsAsVectors
@@ -96,7 +137,8 @@ class MnistDataset(location: String, dataset: String) {
 
 object Mnist {
 
-  val location = Option(System.getenv("MNIST_PATH")).getOrElse(List(System.getenv("HOME"), ".cache", "mnist").mkString(File.separator))
+  val location = Option(System.getenv("MNIST_PATH")).getOrElse(
+    List(System.getenv("HOME"), ".cache", "mnist").mkString(File.separator))
   val locationFile = new File(location)
 
   if (!locationFile.exists)
@@ -106,4 +148,3 @@ object Mnist {
   val testDataset = new MnistDataset(location, "t10k")
 
 }
-

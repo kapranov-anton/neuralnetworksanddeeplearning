@@ -1,9 +1,6 @@
 package example
 
 import breeze.linalg._
-import breeze.numerics._
-
-import scala.util.Random
 
 object Main extends App {
 
