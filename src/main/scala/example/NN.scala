@@ -63,32 +63,34 @@ object NN {
   }
 
   def backprop(nn: NN, x: NN.X, y: NN.Y): (List[Matrix], List[Matrix]) = {
-    val (activations, _ :: zs) =
+    // forward propagation
+    val (activations, zsWithStub) =
       nn.bZipW
-        .scanLeft(x -> x /* У входного слоя нет z, это значение заглушка*/ ) {
+        .scanLeft(x -> x /* We have no Z for input layer, so it's a stub */ ) {
           case ((prevActivation, _), (b, w)) =>
             val z = (w * prevActivation) + b
-            val activation = sigmoid(z)
-            activation -> z
+            sigmoid(z) -> z
+        }
+        .reverse
+        .unzip
+
+    val zs = zsWithStub.init
+
+    val prevActivations = activations.tail
+    val costDerivative = activations.head - y
+    val lastDelta = costDerivative *:* sigmoidPrime(zs.head)
+    val (nbs, nws) =
+      zs.tail
+        .zip(prevActivations.tail)
+        .zip(nn.weights.reverse)
+        .scanLeft(lastDelta -> lastDelta * prevActivations.head.t) {
+          case ((prevDelta, _), ((z, pa), nextWeight)) =>
+            val delta = (nextWeight.t * prevDelta) *:* sigmoidPrime(z)
+            delta -> delta * pa.t
         }
         .unzip
 
-    val costDerivative = activations.last - y
-    var delta = costDerivative *:* sigmoidPrime(zs.last)
-
-    var nablaB: Array[Matrix] = nn.biases.map(_ * 0.0).toArray
-    var nablaW: Array[Matrix] = nn.weights.map(_ * 0.0).toArray
-    nablaB(nablaB.length - 1) = delta
-    nablaW(nablaW.length - 1) = delta * activations(activations.size - 2).t
-    2.until(nn.layers.size).foreach { l =>
-      val z = zs(zs.size - l)
-      val sp = sigmoidPrime(z)
-      delta = (nn.weights(nn.weights.size - l + 1).t * delta) *:* sp
-      nablaB(nablaB.length - l) = delta
-      nablaW(nablaW.length - l) = delta * activations(activations.size - l - 1).t
-    }
-
-    nablaB.toList -> nablaW.toList
+    nbs.reverse -> nws.reverse
   }
 
   def sgd(initNN: NN,
