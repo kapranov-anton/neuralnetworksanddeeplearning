@@ -14,12 +14,12 @@ object Main extends App {
   }.toList
   val (trainData, testData) = allData.splitAt(50000)
   val (firstX, firstY) = trainData.head
-  val nn = NN.init(List(firstX.rows, 10, firstY.rows))
+  val nn = NN.init(List(firstX.rows, 100, firstY.rows))
   Util.time(
     NN.sgd(nn,
            trainingData = trainData,
            epochs = 30,
            batchSize = 10,
-           learningRate = 3.0,
+           learningRate = 0.5,
            testData = testData))
 }

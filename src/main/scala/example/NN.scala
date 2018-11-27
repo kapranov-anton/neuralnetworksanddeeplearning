@@ -77,8 +77,7 @@ object NN {
     val zs = zsWithStub.init
 
     val prevActivations = activations.tail
-    val costDerivative = activations.head - y
-    val lastDelta = costDerivative *:* sigmoidPrime(zs.head)
+    val lastDelta = crossEntropyCostDerivative(activations.head, y, zs.head)
     val (nbs, nws) =
       zs.tail
         .zip(prevActivations.tail)
@@ -92,6 +91,14 @@ object NN {
 
     nbs.reverse -> nws.reverse
   }
+
+  def quadCostDerivative(activation: X, y: Y, z: X): DenseMatrix[Double] =
+    activation - y *:* sigmoidPrime(z)
+
+  def crossEntropyCostDerivative(activation: X,
+                                 y: Y,
+                                 z: X): DenseMatrix[Double] =
+    activation - y
 
   def sgd(initNN: NN,
           trainingData: Data,
