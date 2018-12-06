@@ -52,12 +52,22 @@ object NN {
 
   def updateBatch(nn: NN,
                   batch: List[(NN.X, NN.Y)],
-                  learningRate: Double): NN = {
+                  learningRate: Double,
+                  trainingDataSize: Int,
+                  regularizationParam: Double): NN = {
     val (nbs, nws) = batch.par.map { case (x, y) => backprop(nn, x, y) }.unzip
     val nablaB = nbs.reduce(sumDeltas)
     val nablaW = nws.reduce(sumDeltas)
-    val weights = recalcWeights(nn.weights, nablaW, learningRate)
-    val biases = recalcWeights(nn.biases, nablaB, learningRate)
+    val weights =
+      nn.weights.zip(nablaW).map {
+        case (w, nw) =>
+          (1 - learningRate * (regularizationParam / trainingDataSize)) * w - ((learningRate / batch.size) *:* nw)
+      }
+    val biases =
+      nn.biases.zip(nablaB).map {
+        case (b, nb) =>
+          b - ((learningRate / batch.size) *:* nb)
+      }
 
     nn.copy(weights = weights, biases = biases)
   }
@@ -105,7 +115,8 @@ object NN {
           epochs: Int,
           batchSize: Int,
           learningRate: Double,
-          testData: Data): Unit = {
+          testData: Data,
+          regularizationParam: Double): Unit = {
     val rand = new Random(17)
 
     val batches = for {
@@ -123,7 +134,11 @@ object NN {
           }
         }
 
-        epochCount -> NN.updateBatch(nn, batch, learningRate / batch.size)
+        epochCount -> NN.updateBatch(nn = nn,
+                                     batch = batch,
+                                     learningRate = learningRate,
+                                     trainingDataSize = trainingData.size,
+                                     regularizationParam = regularizationParam)
     }
     println("-" * 80)
     println(f"Final: ${accuracy(model, testData)}%2.2f%%")

@@ -18,8 +18,9 @@ object Main extends App {
   Util.time(
     NN.sgd(nn,
            trainingData = trainData,
-           epochs = 30,
+           epochs = 60,
            batchSize = 10,
-           learningRate = 0.5,
-           testData = testData))
+           learningRate = 0.1,
+           testData = testData,
+           regularizationParam = 5.0))
 }
